@@ -31,7 +31,7 @@ def compute_statistical_features(data):
 # Streamlit app title
 st.title('K-Means Clustering of Photodiode Data')
 
-# File uploader for selecting a ZIP file
+# File uploader for selecting a ZIP file containing multiple CSVs
 uploaded_zip = st.file_uploader("Choose a ZIP file containing CSV files", type="zip")
 
 # Filtering configuration
@@ -47,30 +47,40 @@ if uploaded_zip:
     with zipfile.ZipFile(BytesIO(uploaded_zip.read()), "r") as zip_ref:
         zip_ref.extractall("extracted_files")
 
+    # Processing each CSV file in the extracted folder
     for filename in os.listdir("extracted_files"):
         if filename.endswith(".csv"):
             filepath = os.path.join("extracted_files", filename)
             data = pd.read_csv(filepath)
             data.columns = [col.strip().upper() for col in data.columns]
 
+            # Filtering based on the specified column and threshold
             filter_value = data.iloc[:, filter_colnum - 1].astype(float)
             filtered_data = data[filter_value > filter_threshold]
 
+            # Copying relevant columns and appending them to a list
             filtered_data_copy = filtered_data[['NIR', 'VIS', 'L/O']].copy()
             filtered_data_copy['file_name'] = filename
             filtered_data_list.append(filtered_data_copy)
 
+            # Compute statistical features
             statistical_features = compute_statistical_features(filtered_data[['NIR', 'VIS']])
             lo_mean = filtered_data['L/O'].mean()
             statistical_features.append(lo_mean)
 
+            # Append the features and file name to the lists
             statistical_feature_list.append(statistical_features)
             file_name_list.append(filename)
 
-    # Scale the features
+    # Convert the list of statistical features into a NumPy array
     statistical_features_array = np.array(statistical_feature_list)
+
+    # Standardize the features
     scaler = StandardScaler()
     scaled_features = scaler.fit_transform(statistical_features_array)
+
+    # Debug: Check the shape of scaled_features to ensure it matches the column names
+    st.write(f"Scaled features shape: {scaled_features.shape}")
 
     # User input for number of clusters
     n_clusters = st.number_input('Select number of clusters', min_value=1, max_value=10, value=4)
@@ -80,12 +90,16 @@ if uploaded_zip:
     kmeans.fit(scaled_features)
     kmeans_labels = kmeans.labels_
 
-    # Prepare data for Plotly
-    df_plot = pd.DataFrame(scaled_features, columns=['Scaled NIR Mean', 'Scaled VIS Mean', 'Other'])
+    # Ensure the correct number of column names for the DataFrame
+    columns = ['Scaled NIR Mean', 'Scaled NIR Std', 'Scaled NIR Var',
+               'Scaled VIS Mean', 'Scaled VIS Std', 'Scaled VIS Var', 'L/O Mean']
+
+    # Prepare the DataFrame for Plotly
+    df_plot = pd.DataFrame(scaled_features, columns=columns)
     df_plot['Cluster'] = kmeans_labels
     df_plot['File Name'] = file_name_list
 
-    # Visualize with Plotly
+    # Visualize clustering with Plotly
     st.subheader('Clustering Visualization with Plotly')
     fig = px.scatter(
         df_plot,
@@ -97,7 +111,7 @@ if uploaded_zip:
     )
     st.plotly_chart(fig)
 
-    # Elbow Method
+    # Elbow Method for determining the optimal number of clusters
     st.subheader('Elbow Method for Optimal Clusters')
     k_values = range(1, 11)
     wcss = []
@@ -117,3 +131,4 @@ if uploaded_zip:
     st.plotly_chart(fig)
 else:
     st.info("Please upload a valid ZIP file to start the analysis.")
+
