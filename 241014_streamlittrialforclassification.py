@@ -99,13 +99,14 @@ if uploaded_zip:
     df_plot['Cluster'] = kmeans_labels
     df_plot['File Name'] = file_name_list
 
-    # Visualize clustering with Plotly
+    # Visualize clustering with distinct colors in Plotly
     st.subheader('Clustering Visualization with Plotly')
     fig = px.scatter(
         df_plot,
         x='Scaled NIR Mean',
         y='Scaled VIS Mean',
         color='Cluster',
+        color_discrete_sequence=px.colors.qualitative.Set1,  # Use a distinct color palette
         hover_data=['Cluster', 'Scaled NIR Mean', 'Scaled VIS Mean', 'File Name'],
         title='K-Means Clustering Visualization'
     )
@@ -131,4 +132,5 @@ if uploaded_zip:
     st.plotly_chart(fig)
 else:
     st.info("Please upload a valid ZIP file to start the analysis.")
+
 
