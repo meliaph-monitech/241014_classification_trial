@@ -11,11 +11,11 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import os
+import zipfile
+from io import BytesIO
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 import plotly.express as px
-import tkinter as tk
-from tkinter import filedialog
 
 # Function to compute statistical features
 def compute_statistical_features(data):
@@ -28,33 +28,28 @@ def compute_statistical_features(data):
             features.extend([mean_value, std_value, variance_value])
     return features
 
-def select_folder():
-    root = tk.Tk()
-    root.withdraw()
-    folder_selected = filedialog.askdirectory()
-    return folder_selected
-
 # Streamlit app title
 st.title('K-Means Clustering of Photodiode Data')
 
-# Button to select folder
-if st.button('Select Folder'):
-    folder_path = select_folder()
-else:
-    folder_path = None
+# File uploader for selecting a ZIP file
+uploaded_zip = st.file_uploader("Choose a ZIP file containing CSV files", type="zip")
 
 # Filtering configuration
 filter_colnum = 3  # Column index for filtering (1-based)
 filter_threshold = 0.4  # Filtering threshold
 
-if folder_path and os.path.isdir(folder_path):
+if uploaded_zip:
     filtered_data_list = []
     statistical_feature_list = []
     file_name_list = []
 
-    for filename in os.listdir(folder_path):
+    # Unzipping the uploaded file
+    with zipfile.ZipFile(BytesIO(uploaded_zip.read()), "r") as zip_ref:
+        zip_ref.extractall("extracted_files")
+
+    for filename in os.listdir("extracted_files"):
         if filename.endswith(".csv"):
-            filepath = os.path.join(folder_path, filename)
+            filepath = os.path.join("extracted_files", filename)
             data = pd.read_csv(filepath)
             data.columns = [col.strip().upper() for col in data.columns]
 
@@ -121,4 +116,4 @@ if folder_path and os.path.isdir(folder_path):
     )
     st.plotly_chart(fig)
 else:
-    st.info("Please select a valid folder to start analysis.")
+    st.info("Please upload a valid ZIP file to start the analysis.")
