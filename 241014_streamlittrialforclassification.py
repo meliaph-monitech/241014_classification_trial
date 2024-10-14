@@ -106,7 +106,7 @@ if uploaded_zip:
         x='Scaled NIR Mean',
         y='Scaled VIS Mean',
         color=df_plot['Cluster'],  # Using cluster as a color factor
-        color_continuous_scale=px.colors.sequential.Turbo,  # Using Turbo colormap for distinct colors
+        color_continuous_scale=px.colors.sequential.Rainbow,  # Using Turbo colormap for distinct colors
         hover_data=['Cluster', 'Scaled NIR Mean', 'Scaled VIS Mean', 'File Name'],
         title='K-Means Clustering Visualization'
     )
