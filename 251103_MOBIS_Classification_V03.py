@@ -222,3 +222,62 @@ if train_zip and filter_col and classifier_name:
 else:
     st.info("📁 Please upload Training ZIP, select Filter Column, and Classifier to proceed.")
 
+        # --- New Section: Line Plot of Normalized Raw Signals ---
+        st.subheader("📈 Normalized Signal Line Plot (Train & Test Data)")
+
+        # Helper to load raw signals
+        def load_signals(zip_file, filenames, is_training):
+            signals = {}
+            with zipfile.ZipFile(zip_file, 'r') as z:
+                for fname in filenames:
+                    with z.open(fname) as f:
+                        df = pd.read_csv(f)
+                        if df.shape[1] >= 1:  # Ensure at least 1 column
+                            signal = df.iloc[:, 0].dropna().values  # Take first column
+                            # Normalize
+                            if len(signal) > 0:
+                                signal_norm = (signal - np.min(signal)) / (np.max(signal) - np.min(signal) + 1e-8)
+                                signals[fname] = {
+                                    "signal": signal_norm,
+                                    "is_train": is_training
+                                }
+            return signals
+
+        # Load signals
+        train_signals = load_signals(train_zip, train_names, is_training=True)
+        test_signals = load_signals(test_zip, test_names, is_training=False) if test_zip else {}
+
+        # Create combined plot
+        line_fig = go.Figure()
+
+        # Plot training signals
+        for fname, info in train_signals.items():
+            line_fig.add_trace(go.Scatter(
+                y=info["signal"],
+                mode="lines",
+                name=f"Train - {fname}",
+                line=dict(color="blue", width=1),
+                opacity=0.5
+            ))
+
+        # Plot testing signals
+        for fname, info in test_signals.items():
+            line_fig.add_trace(go.Scatter(
+                y=info["signal"],
+                mode="lines",
+                name=f"Test - {fname}",
+                line=dict(color="red", width=1, dash="dash"),
+                opacity=0.7
+            ))
+
+        line_fig.update_layout(
+            title="Normalized First-Column Signals",
+            xaxis_title="Sample Index",
+            yaxis_title="Normalized Value",
+            yaxis=dict(range=[0, 1]),
+            legend_title="Files",
+            height=600
+        )
+
+        st.plotly_chart(line_fig, use_container_width=True)
+
