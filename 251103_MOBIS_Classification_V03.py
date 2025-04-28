@@ -364,7 +364,7 @@ if train_zip and filter_col and classifier_name:
         filtered_line_fig.update_layout(
             title="Filtered Raw Signals by Label (Train & Test)",
             xaxis_title="Sample Index",
-            yaxis_title="Normalized Value",
+            yaxis_title="Signal Value",
             yaxis=dict(range=[0, 1]),
             legend_title="Files (Train/Test + Label)",
             height=700
