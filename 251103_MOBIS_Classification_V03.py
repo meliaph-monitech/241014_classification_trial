@@ -332,11 +332,15 @@ if train_zip and filter_col and classifier_name:
         color_cycle = px.colors.qualitative.Plotly * (len(all_labels) // len(px.colors.qualitative.Plotly) + 1)
         label_colors = {label: color for label, color in zip(all_labels, color_cycle)}
         
+        # Sort signals by label (Train and Test separately)
+        sorted_train_signals = sorted(filtered_train_signals.items(), key=lambda x: x[1]["label"])
+        sorted_test_signals = sorted(filtered_test_signals.items(), key=lambda x: x[1]["label"])
+        
         # Create line plot for filtered raw signals (train and test)
         filtered_line_fig = go.Figure()
         
         # Plot training signals
-        for fname, info in filtered_train_signals.items():
+        for fname, info in sorted_train_signals:
             color = label_colors.get(info["label"], "blue")
             filtered_line_fig.add_trace(go.Scatter(
                 y=info["signal"],
@@ -344,11 +348,10 @@ if train_zip and filter_col and classifier_name:
                 name=f"Train - {info['label']} - {fname}",
                 line=dict(color=color, width=1),
                 opacity=0.7,
-                # Removed legendgroup to allow individual toggling
             ))
         
         # Plot test signals
-        for fname, info in filtered_test_signals.items():
+        for fname, info in sorted_test_signals:
             color = label_colors.get(info["label"], "red")
             filtered_line_fig.add_trace(go.Scatter(
                 y=info["signal"],
@@ -356,7 +359,6 @@ if train_zip and filter_col and classifier_name:
                 name=f"Test - {info['label']} - {fname}",
                 line=dict(color=color, width=1, dash="dash"),
                 opacity=0.7,
-                # Removed legendgroup to allow individual toggling
             ))
         
         filtered_line_fig.update_layout(
