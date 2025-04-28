@@ -7,6 +7,9 @@ import time
 import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
+import re
+import matplotlib.pyplot as plt
+
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
@@ -18,7 +21,6 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.neural_network import MLPClassifier
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis, LinearDiscriminantAnalysis
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
-import matplotlib.pyplot as plt
 
 # --- Streamlit Setup ---
 st.set_page_config(layout="wide")
@@ -41,8 +43,9 @@ columns = []
 if train_zip:
     with zipfile.ZipFile(train_zip, 'r') as zip_ref:
         csv_files = [f for f in zip_ref.namelist() if f.endswith(".csv")]
-        sample_csv = pd.read_csv(zip_ref.open(csv_files[0]))
-        columns = sample_csv.columns.tolist()
+        if csv_files:
+            sample_csv = pd.read_csv(zip_ref.open(csv_files[0]))
+            columns = sample_csv.columns.tolist()
 
     filter_col = st.sidebar.selectbox("🧹 Select Filter Column", columns)
     filter_threshold = st.sidebar.number_input("🔢 Enter Filter Threshold", value=0.0)
@@ -57,68 +60,27 @@ classifier_name = st.sidebar.selectbox(
     ]
 )
 
-# TRAIN button
-train_button = st.sidebar.button("🏋️‍♂️ TRAIN Model")
-
 # Upload Test ZIP
 test_zip = st.sidebar.file_uploader("🧪 Upload Test ZIP (CSV files)", type="zip")
 
 
 # --- Helper Functions ---
 def get_classifier(name):
-    if name == "RandomForest":
-        return RandomForestClassifier(n_estimators=100, random_state=42)
-    elif name == "SVM":
-        return SVC(probability=True)
-    elif name == "KNN":
-        return KNeighborsClassifier()
-    elif name == "LogisticRegression":
-        return LogisticRegression(max_iter=1000)
-    elif name == "DecisionTree":
-        return DecisionTreeClassifier()
-    elif name == "GradientBoosting":
-        return GradientBoostingClassifier()
-    elif name == "AdaBoost":
-        return AdaBoostClassifier()
-    elif name == "NaiveBayes":
-        return GaussianNB()
-    elif name == "MLP":
-        return MLPClassifier(max_iter=500)
-    elif name == "ExtraTrees":
-        return ExtraTreesClassifier()
-    elif name == "QDA":
-        return QuadraticDiscriminantAnalysis()
-    elif name == "LDA":
-        return LinearDiscriminantAnalysis()
-    return RandomForestClassifier()
-
-def load_and_filter_zip(zip_file, filter_col, filter_threshold, is_training=True):
-    features = []
-    labels = []
-    filenames = []
-
-    with zipfile.ZipFile(zip_file, 'r') as z:
-        for file in z.namelist():
-            if file.endswith('.csv'):
-                df = pd.read_csv(z.open(file))
-
-                # Filtering
-                if filter_col in df.columns:
-                    df = df[df[filter_col] >= filter_threshold]
-
-                # Flatten to 1D feature vector (mean of columns)
-                feat = df.mean().values.tolist()
-
-                features.append(feat)
-                filenames.append(os.path.basename(file))
-
-                if is_training:
-                    label = extract_label_from_filename(file)
-                    labels.append(label)
-
-    return features, labels if is_training else None, filenames
-
-import re
+    classifiers = {
+        "RandomForest": RandomForestClassifier(n_estimators=100, random_state=42),
+        "SVM": SVC(probability=True),
+        "KNN": KNeighborsClassifier(),
+        "LogisticRegression": LogisticRegression(max_iter=1000),
+        "DecisionTree": DecisionTreeClassifier(),
+        "GradientBoosting": GradientBoostingClassifier(),
+        "AdaBoost": AdaBoostClassifier(),
+        "NaiveBayes": GaussianNB(),
+        "MLP": MLPClassifier(max_iter=500),
+        "ExtraTrees": ExtraTreesClassifier(),
+        "QDA": QuadraticDiscriminantAnalysis(),
+        "LDA": LinearDiscriminantAnalysis()
+    }
+    return classifiers.get(name, RandomForestClassifier())
 
 def extract_label_from_filename(name):
     """
@@ -128,7 +90,7 @@ def extract_label_from_filename(name):
     - If 'GAP' appears in filename, append ' GAP' to label
     """
     base = os.path.basename(name)
-    match = re.search(r'(\d+)W', base, re.IGNORECASE)  # Find digits followed by exactly W
+    match = re.search(r'(\d+)W', base, re.IGNORECASE)
     if match:
         watt_label = match.group(1) + "W"
         if "GAP" in base:
@@ -136,9 +98,32 @@ def extract_label_from_filename(name):
         return watt_label
     return None
 
+def load_and_filter_zip(zip_file, filter_col, filter_threshold, is_training=True):
+    features, labels, filenames = [], [], []
+
+    with zipfile.ZipFile(zip_file, 'r') as z:
+        for file in z.namelist():
+            if file.endswith('.csv'):
+                df = pd.read_csv(z.open(file))
+
+                if filter_col in df.columns:
+                    df = df[df[filter_col] >= filter_threshold]
+
+                feat = df.mean().values.tolist()
+                features.append(feat)
+                filenames.append(os.path.basename(file))
+
+                if is_training:
+                    label = extract_label_from_filename(file)
+                    labels.append(label)
+
+    return features, labels if is_training else None, filenames
+
 
 # --- Main Workflow ---
-if train_button and train_zip and filter_col:
+
+# Run Training Automatically if ready
+if train_zip and filter_col and classifier_name:
     st.subheader("📊 Training Data Summary & Visualization")
 
     # Load and filter train data
@@ -209,7 +194,7 @@ if train_button and train_zip and filter_col:
             "Predicted Label": preds
         })
 
-        # Extract label from filename if available
+        # Extract true labels
         result_df["True Label"] = result_df["Filename"].apply(extract_label_from_filename)
         result_df["Match"] = result_df["Predicted Label"] == result_df["True Label"]
 
@@ -235,5 +220,5 @@ if train_button and train_zip and filter_col:
         st.download_button("📥 Download Prediction CSV", csv, "predictions.csv", mime="text/csv")
 
 else:
-    st.info("📁 Please upload a training ZIP and set filter settings, then click TRAIN.")
+    st.info("📁 Please upload Training ZIP, select Filter Column, and Classifier to proceed.")
 
