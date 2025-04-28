@@ -319,31 +319,52 @@ if train_zip and filter_col and classifier_name:
         # Load and filter training signals
         filtered_train_signals = load_and_filter_signals(train_zip, train_names, filter_col, filter_threshold)
         
-        # Define consistent color mapping per label
-        filtered_labels = sorted(list(set([v["label"] for v in filtered_train_signals.values()])))
-        color_cycle = px.colors.qualitative.Plotly * (len(filtered_labels) // len(px.colors.qualitative.Plotly) + 1)
-        label_colors = {label: color for label, color in zip(filtered_labels, color_cycle)}
+        # Load and filter test signals (if test zip is uploaded)
+        filtered_test_signals = {}
+        if test_zip:
+            filtered_test_signals = load_and_filter_signals(test_zip, test_names, filter_col, filter_threshold)
         
-        # Create line plot for filtered raw signals
+        # Define consistent color mapping per label (across training and test sets)
+        all_labels = sorted(list(set(
+            [v["label"] for v in filtered_train_signals.values()] + 
+            [v["label"] for v in filtered_test_signals.values()]
+        )))
+        color_cycle = px.colors.qualitative.Plotly * (len(all_labels) // len(px.colors.qualitative.Plotly) + 1)
+        label_colors = {label: color for label, color in zip(all_labels, color_cycle)}
+        
+        # Create line plot for filtered raw signals (train and test)
         filtered_line_fig = go.Figure()
         
+        # Plot training signals
         for fname, info in filtered_train_signals.items():
             color = label_colors.get(info["label"], "blue")
             filtered_line_fig.add_trace(go.Scatter(
                 y=info["signal"],
                 mode="lines",
-                name=f"{info['label']} - {fname}",
+                name=f"Train - {info['label']} - {fname}",
                 line=dict(color=color, width=1),
                 opacity=0.7,
                 legendgroup=info["label"]
             ))
         
+        # Plot test signals
+        for fname, info in filtered_test_signals.items():
+            color = label_colors.get(info["label"], "red")
+            filtered_line_fig.add_trace(go.Scatter(
+                y=info["signal"],
+                mode="lines",
+                name=f"Test - {info['label']} - {fname}",
+                line=dict(color=color, width=1, dash="dash"),
+                opacity=0.7,
+                legendgroup=info["label"]
+            ))
+        
         filtered_line_fig.update_layout(
-            title="Filtered Raw Signals by Label",
+            title="Filtered Raw Signals by Label (Train & Test)",
             xaxis_title="Sample Index",
             yaxis_title="Normalized Value",
             yaxis=dict(range=[0, 1]),
-            legend_title="Files + Label",
+            legend_title="Files (Train/Test + Label)",
             height=700
         )
         
