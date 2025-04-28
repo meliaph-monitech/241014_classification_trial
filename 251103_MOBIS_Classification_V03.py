@@ -215,69 +215,78 @@ if train_zip and filter_col and classifier_name:
         bar_fig.update_layout(title="Prediction Label Distribution", xaxis_title="Label", yaxis_title="Count")
         st.plotly_chart(bar_fig, use_container_width=True)
 
+        ### DO I ADD THE CODE HERE?
+        # --- New Section: Line Plot of Normalized Raw Signals by Label ---
+        st.subheader("📈 Normalized Signal Line Plot (Grouped by Label)")
+
+        # Helper to load raw signals along with label info
+        def load_signals_with_labels(zip_file, filenames, is_training):
+            signals = {}
+            with zipfile.ZipFile(zip_file, 'r') as z:
+                for fname in filenames:
+                    with z.open(fname) as f:
+                        df = pd.read_csv(f)
+                        if df.shape[1] >= 1:
+                            signal = df.iloc[:, 0].dropna().values
+                            if len(signal) > 0:
+                                signal_norm = (signal - np.min(signal)) / (np.max(signal) - np.min(signal) + 1e-8)
+                                label = extract_label_from_filename(fname)
+                                signals[fname] = {
+                                    "signal": signal_norm,
+                                    "label": label,
+                                    "is_train": is_training
+                                }
+            return signals
+
+        # Load train/test signals
+        train_signals = load_signals_with_labels(train_zip, train_names, is_training=True)
+        test_signals = load_signals_with_labels(test_zip, test_names, is_training=False) if test_zip else {}
+
+        # Define consistent color mapping per label
+        all_labels = sorted(list(set([v["label"] for v in train_signals.values()] + [v["label"] for v in test_signals.values()])))
+        label_colors = {label: color for label, color in zip(all_labels, px.colors.qualitative.Plotly)}
+
+        # Create line plot
+        line_fig = go.Figure()
+
+        # Plot training signals
+        for fname, info in train_signals.items():
+            color = label_colors.get(info["label"], "blue")
+            line_fig.add_trace(go.Scatter(
+                y=info["signal"],
+                mode="lines",
+                name=f"Train - {info['label']} - {fname}",
+                line=dict(color=color, width=1),
+                opacity=0.7,
+                legendgroup=info["label"]
+            ))
+
+        # Plot testing signals
+        for fname, info in test_signals.items():
+            color = label_colors.get(info["label"], "red")
+            line_fig.add_trace(go.Scatter(
+                y=info["signal"],
+                mode="lines",
+                name=f"Test - {info['label']} - {fname}",
+                line=dict(color=color, width=1, dash="dash"),
+                opacity=0.7,
+                legendgroup=info["label"]
+            ))
+
+        line_fig.update_layout(
+            title="Normalized First-Column Signals by Label",
+            xaxis_title="Sample Index",
+            yaxis_title="Normalized Value",
+            yaxis=dict(range=[0, 1]),
+            legend_title="Files (Train/Test + Label)",
+            height=700
+        )
+
+        st.plotly_chart(line_fig, use_container_width=True)
+
         # Download Predictions
         csv = result_df.to_csv(index=False).encode("utf-8")
         st.download_button("📥 Download Prediction CSV", csv, "predictions.csv", mime="text/csv")
 
 else:
     st.info("📁 Please upload Training ZIP, select Filter Column, and Classifier to proceed.")
-
-        # --- New Section: Line Plot of Normalized Raw Signals ---
-        st.subheader("📈 Normalized Signal Line Plot (Train & Test Data)")
-
-        # Helper to load raw signals
-        def load_signals(zip_file, filenames, is_training):
-            signals = {}
-            with zipfile.ZipFile(zip_file, 'r') as z:
-                for fname in filenames:
-                    with z.open(fname) as f:
-                        df = pd.read_csv(f)
-                        if df.shape[1] >= 1:  # Ensure at least 1 column
-                            signal = df.iloc[:, 0].dropna().values  # Take first column
-                            # Normalize
-                            if len(signal) > 0:
-                                signal_norm = (signal - np.min(signal)) / (np.max(signal) - np.min(signal) + 1e-8)
-                                signals[fname] = {
-                                    "signal": signal_norm,
-                                    "is_train": is_training
-                                }
-            return signals
-
-        # Load signals
-        train_signals = load_signals(train_zip, train_names, is_training=True)
-        test_signals = load_signals(test_zip, test_names, is_training=False) if test_zip else {}
-
-        # Create combined plot
-        line_fig = go.Figure()
-
-        # Plot training signals
-        for fname, info in train_signals.items():
-            line_fig.add_trace(go.Scatter(
-                y=info["signal"],
-                mode="lines",
-                name=f"Train - {fname}",
-                line=dict(color="blue", width=1),
-                opacity=0.5
-            ))
-
-        # Plot testing signals
-        for fname, info in test_signals.items():
-            line_fig.add_trace(go.Scatter(
-                y=info["signal"],
-                mode="lines",
-                name=f"Test - {fname}",
-                line=dict(color="red", width=1, dash="dash"),
-                opacity=0.7
-            ))
-
-        line_fig.update_layout(
-            title="Normalized First-Column Signals",
-            xaxis_title="Sample Index",
-            yaxis_title="Normalized Value",
-            yaxis=dict(range=[0, 1]),
-            legend_title="Files",
-            height=600
-        )
-
-        st.plotly_chart(line_fig, use_container_width=True)
-
