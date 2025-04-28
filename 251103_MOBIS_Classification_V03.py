@@ -367,7 +367,7 @@ if train_zip and filter_col and classifier_name:
             yaxis_title="Signal Value",
             yaxis=dict(range=[0, 1]),
             legend_title="Files (Train/Test + Label)",
-            height=700
+            height=400
         )
         
         st.plotly_chart(filtered_line_fig, use_container_width=True)
