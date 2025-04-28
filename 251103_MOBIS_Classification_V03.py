@@ -217,78 +217,138 @@ if train_zip and filter_col and classifier_name:
         st.plotly_chart(bar_fig, use_container_width=True)
 
         ### DO I ADD THE CODE HERE?
-        # --- New Section: Line Plot of Normalized Raw Signals by Label ---
-        st.subheader("📈 Normalized Signal Line Plot (Grouped by Label)")
+        # # --- New Section: Line Plot of Normalized Raw Signals by Label ---
+        # st.subheader("📈 Normalized Signal Line Plot (Grouped by Label)")
 
-        # Helper to load raw signals along with label info
-        def load_signals_with_labels(zip_file, filenames, is_training):
+        # # Helper to load raw signals along with label info
+        # def load_signals_with_labels(zip_file, filenames, is_training):
+        #     signals = {}
+        #     with zipfile.ZipFile(zip_file, 'r') as z:
+        #         for fname in filenames:
+        #             with z.open(fname) as f:
+        #                 df = pd.read_csv(f)
+        #                 if df.shape[1] >= 1:
+        #                     signal = df.iloc[:, 0].dropna().values
+        #                     if len(signal) > 0:
+        #                         signal_norm = (signal - np.min(signal)) / (np.max(signal) - np.min(signal) + 1e-8)
+        #                         label = extract_label_from_filename(fname)
+        #                         signals[fname] = {
+        #                             "signal": signal_norm,
+        #                             "label": label,
+        #                             "is_train": is_training
+        #                         }
+        #     return signals
+
+        # # Load train/test signals
+        # train_signals = load_signals_with_labels(train_zip, train_names, is_training=True)
+        # test_signals = load_signals_with_labels(test_zip, test_names, is_training=False) if test_zip else {}
+
+        # # Define consistent color mapping per label
+        # all_labels = sorted(list(set([v["label"] for v in train_signals.values()] + [v["label"] for v in test_signals.values()])))
+        
+        # # Ensure enough colors by cycling through the available colors
+        # color_cycle = px.colors.qualitative.Plotly * (len(all_labels) // len(px.colors.qualitative.Plotly) + 1)
+        # label_colors = {label: color for label, color in zip(all_labels, color_cycle)}
+
+
+        # # Create line plot
+        # line_fig = go.Figure()
+
+        # # Plot training signals
+        # for fname, info in train_signals.items():
+        #     color = label_colors.get(info["label"], "blue")
+        #     line_fig.add_trace(go.Scatter(
+        #         y=info["signal"],
+        #         mode="lines",
+        #         name=f"Train - {info['label']} - {fname}",
+        #         line=dict(color=color, width=1),
+        #         opacity=0.7,
+        #         legendgroup=info["label"]
+        #     ))
+
+        # # Plot testing signals
+        # for fname, info in test_signals.items():
+        #     color = label_colors.get(info["label"], "red")
+        #     line_fig.add_trace(go.Scatter(
+        #         y=info["signal"],
+        #         mode="lines",
+        #         name=f"Test - {info['label']} - {fname}",
+        #         line=dict(color=color, width=1, dash="dash"),
+        #         opacity=0.7,
+        #         legendgroup=info["label"]
+        #     ))
+
+        # line_fig.update_layout(
+        #     title="Normalized First-Column Signals by Label",
+        #     xaxis_title="Sample Index",
+        #     yaxis_title="Normalized Value",
+        #     yaxis=dict(range=[0, 1]),
+        #     legend_title="Files (Train/Test + Label)",
+        #     height=700
+        # )
+
+        # st.plotly_chart(line_fig, use_container_width=True)
+
+        # --- New Section: Line Plot of Filtered Raw Signals by Label ---
+        st.subheader("📈 Filtered Raw Signal Line Plot (Grouped by Label)")
+        
+        # Helper to load filtered raw signals along with label info
+        def load_and_filter_signals(zip_file, filenames, filter_col, filter_threshold):
             signals = {}
             with zipfile.ZipFile(zip_file, 'r') as z:
                 for fname in filenames:
                     with z.open(fname) as f:
                         df = pd.read_csv(f)
-                        if df.shape[1] >= 1:
+                        # Apply filtering if the filter column exists
+                        if filter_col in df.columns:
+                            df = df[df[filter_col] >= filter_threshold]
+                        
+                        # Only process if there is valid data after filtering
+                        if not df.empty and df.shape[1] >= 1:
                             signal = df.iloc[:, 0].dropna().values
                             if len(signal) > 0:
+                                # Normalize the signal
                                 signal_norm = (signal - np.min(signal)) / (np.max(signal) - np.min(signal) + 1e-8)
                                 label = extract_label_from_filename(fname)
                                 signals[fname] = {
                                     "signal": signal_norm,
-                                    "label": label,
-                                    "is_train": is_training
+                                    "label": label
                                 }
             return signals
-
-        # Load train/test signals
-        train_signals = load_signals_with_labels(train_zip, train_names, is_training=True)
-        test_signals = load_signals_with_labels(test_zip, test_names, is_training=False) if test_zip else {}
-
-        # Define consistent color mapping per label
-        all_labels = sorted(list(set([v["label"] for v in train_signals.values()] + [v["label"] for v in test_signals.values()])))
         
-        # Ensure enough colors by cycling through the available colors
-        color_cycle = px.colors.qualitative.Plotly * (len(all_labels) // len(px.colors.qualitative.Plotly) + 1)
-        label_colors = {label: color for label, color in zip(all_labels, color_cycle)}
-
-
-        # Create line plot
-        line_fig = go.Figure()
-
-        # Plot training signals
-        for fname, info in train_signals.items():
+        # Load and filter training signals
+        filtered_train_signals = load_and_filter_signals(train_zip, train_names, filter_col, filter_threshold)
+        
+        # Define consistent color mapping per label
+        filtered_labels = sorted(list(set([v["label"] for v in filtered_train_signals.values()])))
+        color_cycle = px.colors.qualitative.Plotly * (len(filtered_labels) // len(px.colors.qualitative.Plotly) + 1)
+        label_colors = {label: color for label, color in zip(filtered_labels, color_cycle)}
+        
+        # Create line plot for filtered raw signals
+        filtered_line_fig = go.Figure()
+        
+        for fname, info in filtered_train_signals.items():
             color = label_colors.get(info["label"], "blue")
-            line_fig.add_trace(go.Scatter(
+            filtered_line_fig.add_trace(go.Scatter(
                 y=info["signal"],
                 mode="lines",
-                name=f"Train - {info['label']} - {fname}",
+                name=f"{info['label']} - {fname}",
                 line=dict(color=color, width=1),
                 opacity=0.7,
                 legendgroup=info["label"]
             ))
-
-        # Plot testing signals
-        for fname, info in test_signals.items():
-            color = label_colors.get(info["label"], "red")
-            line_fig.add_trace(go.Scatter(
-                y=info["signal"],
-                mode="lines",
-                name=f"Test - {info['label']} - {fname}",
-                line=dict(color=color, width=1, dash="dash"),
-                opacity=0.7,
-                legendgroup=info["label"]
-            ))
-
-        line_fig.update_layout(
-            title="Normalized First-Column Signals by Label",
+        
+        filtered_line_fig.update_layout(
+            title="Filtered Raw Signals by Label",
             xaxis_title="Sample Index",
             yaxis_title="Normalized Value",
             yaxis=dict(range=[0, 1]),
-            legend_title="Files (Train/Test + Label)",
+            legend_title="Files + Label",
             height=700
         )
-
-        st.plotly_chart(line_fig, use_container_width=True)
-
+        
+        st.plotly_chart(filtered_line_fig, use_container_width=True)
+        
         # Download Predictions
         csv = result_df.to_csv(index=False).encode("utf-8")
         st.download_button("📥 Download Prediction CSV", csv, "predictions.csv", mime="text/csv")
