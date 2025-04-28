@@ -154,7 +154,7 @@ def extract_label_from_filename(name):
     - If 'GAP' appears in filename, append ' GAP' to label
     """
     base = os.path.basename(name)
-    match = re.search(r'(\d+)W', base)  # Find digits followed by exactly W
+    match = re.search(r'(\d+)W', base, re.IGNORECASE)  # Find digits followed by exactly W
     if match:
         watt_label = match.group(1) + "W"
         if "GAP" in base:
