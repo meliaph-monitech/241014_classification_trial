@@ -118,32 +118,6 @@ def load_and_filter_zip(zip_file, filter_col, filter_threshold, is_training=True
 
     return features, labels if is_training else None, filenames
 
-# def extract_label_from_filename(name):
-#     """
-#     Extract label from filename based on your rule:
-#     - Take number in front of 'W'
-#     - If 'GAP' exists, label = '<number>W GAP'
-#     - Else, label = '<number>W'
-#     """
-#     base = os.path.basename(name)
-#     parts = base.split("_")
-#     watt_label = None
-
-#     for part in parts:
-#         if "W" in part:
-#             try:
-#                 number = int(part.replace("W", "").strip())
-#                 watt_label = f"{number}W"
-#                 break
-#             except:
-#                 continue
-
-#     if watt_label:
-#         if "GAP" in base:
-#             watt_label += " GAP"
-#         return watt_label
-#     return None
-
 import re
 
 def extract_label_from_filename(name):
