@@ -344,7 +344,7 @@ if train_zip and filter_col and classifier_name:
                 name=f"Train - {info['label']} - {fname}",
                 line=dict(color=color, width=1),
                 opacity=0.7,
-                legendgroup=info["label"]
+                # Removed legendgroup to allow individual toggling
             ))
         
         # Plot test signals
@@ -356,7 +356,7 @@ if train_zip and filter_col and classifier_name:
                 name=f"Test - {info['label']} - {fname}",
                 line=dict(color=color, width=1, dash="dash"),
                 opacity=0.7,
-                legendgroup=info["label"]
+                # Removed legendgroup to allow individual toggling
             ))
         
         filtered_line_fig.update_layout(
