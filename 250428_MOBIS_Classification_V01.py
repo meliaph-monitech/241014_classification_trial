@@ -144,21 +144,19 @@ def load_and_filter_zip(zip_file, filter_col, filter_threshold, is_training=True
 #         return watt_label
 #     return None
 
+import re
+
 def extract_label_from_filename(name):
+    """
+    Extract the watt label from filename:
+    - Find the number immediately before 'W'
+    - Ignore whatever comes after 'W'
+    - If 'GAP' appears in filename, append ' GAP' to label
+    """
     base = os.path.basename(name)
-    parts = base.split("_")
-    watt_label = None
-
-    for part in parts:
-        if "W" in part:
-            try:
-                number = int(part.replace("W", "").strip())
-                watt_label = f"{number}W"
-                break
-            except:
-                continue
-
-    if watt_label:
+    match = re.search(r'(\d+)W', base)  # Find digits followed by exactly W
+    if match:
+        watt_label = match.group(1) + "W"
         if "GAP" in base:
             watt_label += " GAP"
         return watt_label
