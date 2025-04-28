@@ -244,7 +244,11 @@ if train_zip and filter_col and classifier_name:
 
         # Define consistent color mapping per label
         all_labels = sorted(list(set([v["label"] for v in train_signals.values()] + [v["label"] for v in test_signals.values()])))
-        label_colors = {label: color for label, color in zip(all_labels, px.colors.qualitative.Plotly)}
+        
+        # Ensure enough colors by cycling through the available colors
+        color_cycle = px.colors.qualitative.Plotly * (len(all_labels) // len(px.colors.qualitative.Plotly) + 1)
+        label_colors = {label: color for label, color in zip(all_labels, color_cycle)}
+
 
         # Create line plot
         line_fig = go.Figure()
