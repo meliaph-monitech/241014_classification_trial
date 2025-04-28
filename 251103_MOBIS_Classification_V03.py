@@ -7,6 +7,7 @@ import time
 import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
+import plotly.express as px
 import re
 import matplotlib.pyplot as plt
 
